@@ -45,7 +45,7 @@ Search (`Ctrl K`), `llms.txt`, `llms-full.txt` and per-page Markdown (`/<page>.m
 
 ## Deploy
 
-Deployed on Vercel as its own project. Every push to `main` redeploys.
+Live at **[orbit-docs-eta.vercel.app](https://orbit-docs-eta.vercel.app)**. Deployed on Vercel as its own project, and every push to `main` redeploys.
 
 ## Writing rules
 

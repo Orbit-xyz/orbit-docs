@@ -8,6 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://orbit-docs-eta.vercel.app'),
   title: {
     template: '%s | Orbit Docs',
     default: 'Orbit Docs',
