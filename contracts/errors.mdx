@@ -1,0 +1,27 @@
+---
+title: "Contract errors"
+description: "Every way an Orbit invocation can fail, and what to do about it."
+---
+
+Orbit currently fails with host panics that carry a string message, not typed `contracterror` codes. Typed codes are on the [roadmap](/roadmap).
+
+| Message / source | Entrypoint | Cause | Fix |
+|---|---|---|---|
+| `Vault does not exist` | `pull_funds` | No `create_vault` for this `(user, merchant)` | Subscriber completes the handshake |
+| `Too early to pull funds` | `pull_funds` | `now < last_pull + interval` | Retry after the next eligible time |
+| Auth error | all | Required signer missing | Sign with `user`, `merchant` or `sender` |
+| Allowance error (SAC) | `pull_funds`, `batch_disburse` | Allowance too low, expired or revoked | Re-approve Orbit on the token |
+| Balance error (SAC) | `pull_funds`, `batch_disburse` | Source lacks tokens | Fund the wallet |
+| Trustline error (SAC) | `pull_funds`, `batch_disburse` | Receiving `G...` account has no trustline | Add a trustline for the asset |
+| Arithmetic overflow | `pull_funds` | `last_pull + interval` overflows `u64` | Use a realistic `interval_seconds` |
+
+## Catch errors before signing
+
+Always simulate first. `rpc.Server.prepareTransaction` (JS) and `stellar contract invoke --send=no` (CLI) both surface these messages without spending a fee.
+
+```ts
+const sim = await server.simulateTransaction(tx);
+if (rpc.Api.isSimulationError(sim)) {
+  if (sim.error.includes("Too early to pull funds")) { /* reschedule */ }
+}
+```

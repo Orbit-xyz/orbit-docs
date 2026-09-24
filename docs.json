@@ -1,0 +1,110 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Orbit",
+  "description": "Non-custodial pull payments and atomic batch payroll on Stellar Soroban.",
+  "colors": {
+    "primary": "#000000",
+    "light": "#FFFFFF",
+    "dark": "#2C2C2C"
+  },
+  "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png",
+    "href": "https://orbit-lemon-mu.vercel.app"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/Orbit-xyz/Orbit"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://orbit-lemon-mu.vercel.app/dashboard"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["introduction", "quickstart", "guides/testnet"]
+          },
+          {
+            "group": "Core concepts",
+            "pages": ["concepts/allowance-vaults", "concepts/trust-model"]
+          },
+          {
+            "group": "Checkout",
+            "pages": ["guides/checkout/hosted-checkout", "guides/checkout/widget"]
+          },
+          {
+            "group": "Subscriptions",
+            "pages": ["guides/subscriptions/plans", "guides/subscriptions/billing-cycles"]
+          },
+          {
+            "group": "Payroll",
+            "pages": ["guides/payroll/batch-payroll"]
+          },
+          {
+            "group": "Project",
+            "pages": ["roadmap"]
+          }
+        ]
+      },
+      {
+        "tab": "Smart contract",
+        "groups": [
+          {
+            "group": "OrbitContract",
+            "pages": [
+              "contracts/overview",
+              "contracts/create-vault",
+              "contracts/pull-funds",
+              "contracts/batch-disburse",
+              "contracts/errors"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/overview", "api-reference/errors", "api-reference/webhooks"]
+          },
+          {
+            "group": "Plans",
+            "openapi": "api-reference/openapi.yaml",
+            "pages": ["POST /plans", "GET /plans/{id}"]
+          },
+          {
+            "group": "Subscriptions",
+            "openapi": "api-reference/openapi.yaml",
+            "pages": ["POST /subscriptions", "GET /subscribers"]
+          },
+          {
+            "group": "Billing",
+            "openapi": "api-reference/openapi.yaml",
+            "pages": ["POST /trigger-pull"]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Orbit-xyz"
+    }
+  }
+}

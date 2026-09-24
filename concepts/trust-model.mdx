@@ -1,0 +1,60 @@
+---
+title: "Trust model"
+description: "What each party has to trust, and what the contract guarantees."
+---
+
+Orbit is designed so that the trust each party needs is small and written down.
+
+<AccordionGroup>
+  <Accordion title="Subscribers trust the token allowance, not the merchant" icon="user-shield">
+    The most a merchant can ever take is `min(allowance, balance)`. The allowance is set by the subscriber, expires at `live_until_ledger`, and can be set to zero at any time.
+  </Accordion>
+
+  <Accordion title="Subscribers trust the cadence check" icon="clock">
+    Within the allowance, Orbit allows at most one `amount_per_interval` pull per `interval_seconds`, measured by `env.ledger().timestamp()`. The caller cannot supply or influence the clock.
+  </Accordion>
+
+  <Accordion title="Merchants trust the ledger for settlement" icon="landmark">
+    A successful `pull_funds` means the tokens are already in the merchant's wallet. There is no off-chain settlement step and no chargeback.
+  </Accordion>
+
+  <Accordion title="Nobody trusts an Orbit operator" icon="key">
+    The contract has no admin, no pause switch, no fee and no upgrade key. The Merchant API is a convenience layer that submits transactions signed by the merchant. It never holds user funds.
+  </Accordion>
+</AccordionGroup>
+
+## Authorization boundaries
+
+| Entrypoint | `require_auth` on | Who is protected |
+|---|---|---|
+| `create_vault` | `user` | Nobody can set billing terms on a subscriber's behalf |
+| `pull_funds` | `merchant` | Only the merchant named in the vault key can pull |
+| `batch_disburse` | `sender` | Only the sender can spend their own allowance |
+
+## Guarantees
+
+<Columns cols={2}>
+  <Card title="Non-custodial" icon="wallet">
+    Orbit is only the spender. The contract never holds a token balance.
+  </Card>
+  <Card title="Atomic" icon="atom">
+    A failed transfer reverts the whole invocation, including any earlier batch transfers and the cadence update.
+  </Card>
+  <Card title="No double pull" icon="repeat-1">
+    `last_pull_timestamp` is written in the same invocation as the transfer.
+  </Card>
+  <Card title="Overflow-safe" icon="calculator">
+    Release builds use `overflow-checks = true`, so arithmetic aborts instead of wrapping.
+  </Card>
+</Columns>
+
+## Known limitations
+
+<Warning>
+  The contract is an MVP and has not been audited.
+</Warning>
+
+- `create_vault` does not reject zero values. `interval_seconds = 0` lets the merchant pull at any time, still capped by the allowance.
+- Re-running `create_vault` resets the cadence, so the merchant can pull again immediately. Clients should warn the subscriber before they re-subscribe.
+- The contract emits no custom events. Index `transfer` events from the SAC and the results of Orbit invocations.
+- Errors are string panics, not typed error codes. See [Contract errors](/contracts/errors).

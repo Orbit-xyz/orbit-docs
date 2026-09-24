@@ -1,0 +1,54 @@
+---
+title: "Plans"
+description: "Define what you charge and how often."
+---
+
+A plan is an off-chain template: a name, an amount and an interval. When a customer subscribes, the plan's values are copied into their onchain vault.
+
+## Plan fields
+
+| Field | Type | Example | Notes |
+|---|---|---|---|
+| `name` | string | `Pro Monthly` | Shown at checkout |
+| `usdc_amount` | integer | `290000000` | Raw units, 7 decimals (29 USDC) |
+| `interval_seconds` | integer | `2592000` | Minimum gap between pulls |
+| `merchant_id` | uuid | | Owner of the plan |
+
+## Common intervals
+
+| Cadence | `interval_seconds` |
+|---|---|
+| Daily | `86400` |
+| Weekly | `604800` |
+| 30 days | `2592000` |
+| 365 days | `31536000` |
+
+<Note>
+  Intervals are fixed durations in ledger time, not calendar months. A "monthly" plan of `2592000` bills every 30 days.
+</Note>
+
+## Create a plan
+
+<Tabs>
+  <Tab title="Dashboard">
+    Go to **Dashboard → Subscription Plans → New plan**, fill in the name, price and cadence, then copy the embed code or checkout link.
+  </Tab>
+  <Tab title="API">
+    ```bash
+    curl -X POST http://localhost:3001/plans \
+      -H "Content-Type: application/json" \
+      -d '{
+        "merchant_id": "3f0c...",
+        "name": "Pro Monthly",
+        "usdc_amount": 290000000,
+        "interval_seconds": 2592000
+      }'
+    ```
+
+    See [`POST /plans`](/api-reference/overview).
+  </Tab>
+</Tabs>
+
+## Changing a price
+
+Existing vaults keep the terms they were created with. To move a subscriber to a new price, they call `create_vault` again with the new amount. This resets the cadence, so schedule it right after a pull.

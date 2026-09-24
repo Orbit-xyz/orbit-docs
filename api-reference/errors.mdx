@@ -1,0 +1,31 @@
+---
+title: "Errors"
+description: "HTTP status codes returned by the Merchant API."
+---
+
+Every error response body has this shape:
+
+```json
+{ "error": "Missing required fields" }
+```
+
+| Status | When | Retry? |
+|---|---|---|
+| `400` | A required field is missing | No. Fix the request |
+| `401` | `merchant_secret` does not match the plan owner's wallet (`/trigger-pull`) | No |
+| `404` | Plan or subscription not found | No |
+| `500` | Database error, or the Soroban simulation or submission failed. The message is passed through | Depends on the message |
+
+## Soroban failures on `/trigger-pull`
+
+A `500` from `/trigger-pull` carries the simulation error. Match it against the [contract errors](/contracts/errors):
+
+| Message contains | Action |
+|---|---|
+| `Too early to pull funds` | Retry after the interval |
+| `Vault does not exist` | The subscriber has not run `create_vault` |
+| allowance or balance error | Mark the subscription `past_due` and notify the subscriber |
+
+<Note>
+  The endpoint returns once the transaction is **submitted**, before it is confirmed. Poll `getTransaction(txHash)` before you mark the cycle as paid.
+</Note>

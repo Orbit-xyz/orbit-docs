@@ -1,0 +1,61 @@
+---
+title: "create_vault"
+description: "Record billing terms for a (user, merchant) pair. Moves no funds."
+---
+
+```rust
+pub fn create_vault(
+    env: Env,
+    user: Address,
+    merchant: Address,
+    token: Address,
+    amount_per_interval: i128,
+    interval_seconds: u64,
+)
+```
+
+**Auth:** `user.require_auth()`
+
+## Parameters
+
+<ParamField path="user" type="Address" required>
+  The subscriber. Must sign. This is the account tokens are pulled from.
+</ParamField>
+
+<ParamField path="merchant" type="Address" required>
+  The only address that can call `pull_funds` on this vault.
+</ParamField>
+
+<ParamField path="token" type="Address" required>
+  SEP-41 token contract, for example the USDC SAC.
+</ParamField>
+
+<ParamField path="amount_per_interval" type="i128" required>
+  Raw units pulled each cycle. `290000000` = 29 USDC.
+</ParamField>
+
+<ParamField path="interval_seconds" type="u64" required>
+  Minimum ledger-time gap between pulls.
+</ParamField>
+
+## Effects
+
+1. Writes `VaultData { token, amount_per_interval, interval_seconds, last_pull_timestamp: 0 }` under `VaultKey { user, merchant }` in persistent storage.
+2. Overwrites any vault that already exists for the same pair.
+
+## Preconditions for later pulls
+
+`create_vault` does **not** check the allowance. It succeeds even without an allowance, but every pull will fail until the user calls `approve` on the token with Orbit as the spender.
+
+## Example
+
+```bash
+stellar contract invoke --id $ORBIT --source subscriber --network testnet -- \
+  create_vault \
+  --user $SUBSCRIBER --merchant $MERCHANT --token $TOKEN \
+  --amount_per_interval 290000000 --interval_seconds 2592000
+```
+
+<Warning>
+  Calling this again for an existing pair resets `last_pull_timestamp` to `0`, which lets the merchant pull again immediately.
+</Warning>

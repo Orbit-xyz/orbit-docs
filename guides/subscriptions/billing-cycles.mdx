@@ -1,0 +1,64 @@
+---
+title: "Billing cycles"
+description: "Pull each cycle manually, from your backend, or from a keeper."
+---
+
+A billing cycle is one successful `pull_funds`. Only the merchant can sign it, but you choose who submits it.
+
+## Options
+
+<Tabs>
+  <Tab title="Dashboard">
+    **Subscribers → select → Pull now**.
+
+    <Note>
+      Dashboard pulls are in **preview** and simulated. For real pulls, use the Merchant API or the CLI.
+    </Note>
+  </Tab>
+
+  <Tab title="Merchant API">
+    `POST /trigger-pull` builds, simulates, signs and submits `pull_funds`, then moves `next_billing_date` forward.
+
+    ```bash
+    curl -X POST http://localhost:3001/trigger-pull \
+      -H "Content-Type: application/json" \
+      -d '{ "subscription_id": "b2a9...", "merchant_secret": "S..." }'
+    ```
+
+    <Warning>
+      This endpoint takes the merchant's secret key in the request body. Use it only on testnet, on a server you control.
+    </Warning>
+  </Tab>
+
+  <Tab title="Keeper script">
+    Run a cron job that looks up due subscriptions and pulls each one:
+
+    ```ts
+    const due = await db.subscriptions.where("next_billing_date", "<=", new Date());
+    for (const sub of due) {
+      try {
+        await pullFunds(sub.customer_wallet_address, MERCHANT); // signs with a KMS-held key
+        await db.subscriptions.bump(sub.id);
+      } catch (e) {
+        // "Too early" means your clock is ahead of the ledger. Retry next run.
+        // An allowance or balance error means the subscription is past due.
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Timing
+
+- The first pull on a new vault is allowed right away.
+- After that, pull when `ledger_time >= last_pull_timestamp + interval_seconds`. The ledger clock can differ slightly from your server's clock, so simulate first.
+- A pull that fails does not update `last_pull_timestamp`, so you can simply retry it.
+
+## Failure handling
+
+| Failure | Meaning | Action |
+|---|---|---|
+| `Too early to pull funds` | Interval not elapsed | Retry after `last_pull + interval` |
+| SAC allowance error | Allowance spent, expired or revoked | Mark past due and ask the subscriber to re-approve |
+| SAC balance error | Subscriber lacks funds | Retry later and notify the subscriber |
+| `Vault does not exist` | No vault for this pair | Subscriber never completed `create_vault` |

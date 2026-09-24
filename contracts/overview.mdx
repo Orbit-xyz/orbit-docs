@@ -1,0 +1,87 @@
+---
+title: "OrbitContract"
+description: "A no_std Soroban contract with three entrypoints, persistent vault storage and no admin."
+---
+
+| | |
+|---|---|
+| Source | [`contracts/soroban/src/lib.rs`](https://github.com/Orbit-xyz/Orbit/blob/main/contracts/soroban/src/lib.rs) |
+| SDK | `soroban-sdk 27.0.6` |
+| Target | `wasm32v1-none` |
+| Testnet ID | [`CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG`](https://stellar.expert/explorer/testnet/contract/CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG) |
+| Admin | None |
+| Events | None (index SAC `transfer` events) |
+
+## Entrypoints
+
+<Columns cols={3}>
+  <Card title="create_vault" icon="lock" href="/contracts/create-vault">
+    Subscriber sets the billing terms for one merchant.
+  </Card>
+  <Card title="pull_funds" icon="arrow-down-to-line" href="/contracts/pull-funds">
+    Merchant collects one cycle.
+  </Card>
+  <Card title="batch_disburse" icon="split" href="/contracts/batch-disburse">
+    Sender pays many recipients atomically.
+  </Card>
+</Columns>
+
+## Types
+
+```rust
+#[contracttype]
+pub struct VaultKey {
+    pub user: Address,
+    pub merchant: Address,
+}
+
+#[contracttype]
+pub struct VaultData {
+    pub token: Address,
+    pub amount_per_interval: i128,
+    pub interval_seconds: u64,
+    pub last_pull_timestamp: u64,
+}
+
+#[contracttype]
+pub struct PaymentSplit {
+    pub recipient: Address,
+    pub amount: i128,
+}
+```
+
+## Storage
+
+| Key | Type | Value | TTL |
+|---|---|---|---|
+| `VaultKey { user, merchant }` | persistent | `VaultData` | Network default; not extended by the contract |
+
+<Warning>
+  The contract does not extend the TTL of vault entries. A vault that goes unused for longer than the persistent entry TTL gets archived and has to be restored before the next pull. Pulling on schedule keeps it live.
+</Warning>
+
+## Token model
+
+Orbit is always the **spender**, never the holder:
+
+```rust
+token::Client::new(&env, &token).transfer_from(
+    &env.current_contract_address(), // spender: Orbit
+    &from,                           // user or sender
+    &to,                             // merchant or recipient
+    &amount,
+);
+```
+
+Any SEP-41 token works: a Stellar Asset Contract (USDC, XLM) or a custom Soroban token that implements `approve` and `transfer_from`.
+
+## Build and test
+
+```bash
+cd contracts/soroban
+cargo test
+stellar contract build
+# target/wasm32v1-none/release/orbit_contract.wasm
+```
+
+Release profile: `opt-level = "z"`, `lto = true`, `overflow-checks = true`, `panic = "abort"`.

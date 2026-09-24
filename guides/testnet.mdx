@@ -1,0 +1,48 @@
+---
+title: "Testnet"
+description: "Network constants, test funds and tooling for building against Orbit before mainnet."
+---
+
+Orbit runs on **Stellar Testnet**. Testnet accounts cost nothing to fund, ledgers close about every 5 seconds, and the network is reset from time to time.
+
+## Network constants
+
+| Parameter | Value |
+| :--- | :--- |
+| Orbit contract ID | [`CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG`](https://stellar.expert/explorer/testnet/contract/CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG) |
+| Network passphrase | `Test SDF Network ; September 2015` |
+| Soroban RPC | `https://soroban-testnet.stellar.org` |
+| Horizon | `https://horizon-testnet.stellar.org` |
+| Settlement asset | USDC via its Stellar Asset Contract (7 decimals) |
+
+## Get test funds
+
+<AccordionGroup>
+  <Accordion title="XLM for fees" icon="droplet">
+    `stellar keys generate <name> --network testnet --fund` creates an account and funds it through Friendbot. In Freighter, switch to Testnet and use the built-in **Fund with Friendbot** button.
+  </Accordion>
+
+  <Accordion title="A token to bill in" icon="coins">
+    The quickest option is the native-asset SAC, which needs no trustline:
+
+    ```bash
+    stellar contract id asset --asset native --network testnet
+    ```
+
+    To bill in real testnet USDC, add a USDC trustline to the subscriber account and get tokens from a testnet USDC faucet, then pass the USDC SAC address as `token`.
+  </Accordion>
+</AccordionGroup>
+
+## Deploy your own copy
+
+Useful when you change the contract.
+
+```bash
+git clone https://github.com/Orbit-xyz/Orbit && cd Orbit/scripts
+./deploy.sh          # builds the WASM, deploys it, writes .contract_id
+./execute_flow.sh    # approve -> create_vault -> pull_funds -> batch_disburse
+```
+
+## Mainnet
+
+Orbit is not deployed to mainnet. Moving there means redeploying the audited WASM and switching three values: contract ID, network passphrase and RPC URL. Track progress on the [roadmap](/roadmap).

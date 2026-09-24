@@ -1,0 +1,107 @@
+---
+title: "Checkout widget"
+description: "Embed the <OrbitCheckout /> React component and run the subscription handshake from your own app."
+---
+
+`<OrbitCheckout />` is a drop-in React component. It loads a plan, connects Freighter and records the subscription with `POST /subscriptions`.
+
+<Note>
+  The widget does not submit the onchain handshake yet. Pair it with the [signing code below](#signing-the-handshake-yourself) so the subscription is backed by a real vault.
+</Note>
+
+## Install
+
+The widget lives in the monorepo under `packages/checkout-widget`. It is not on npm yet.
+
+```bash
+git clone https://github.com/Orbit-xyz/Orbit
+cd Orbit/packages/checkout-widget
+npm install
+npm run dev     # preview at http://localhost:5173
+```
+
+Copy `src/OrbitCheckout.jsx` into your app, and install its peer dependencies:
+
+```bash
+npm install @stellar/freighter-api @stellar/stellar-sdk framer-motion
+```
+
+## Usage
+
+```jsx
+import OrbitCheckout from "./OrbitCheckout";
+
+export function Subscribe() {
+  return (
+    <OrbitCheckout
+      planId="7c1e2d4a-0f6b-4a8e-9d51-3b2c9a1f6e20"
+      apiUrl="https://your-orbit-api.example.com"
+    />
+  );
+}
+```
+
+## Props
+
+<ParamField path="planId" type="string" required>
+  The plan's UUID from the dashboard or `POST /plans`. The widget fetches `GET {apiUrl}/plans/{planId}`.
+</ParamField>
+
+<ParamField path="planData" type="object">
+  Pass a plan object you already have to skip the fetch. Shape: `{ id, name, usdc_amount, interval_seconds, merchants: { name } }`.
+</ParamField>
+
+<ParamField path="apiUrl" type="string" default="http://localhost:3001">
+  Base URL of your Merchant API.
+</ParamField>
+
+## Signing the handshake yourself
+
+For full control, build the two subscriber transactions with `@stellar/stellar-sdk` and sign them with Freighter:
+
+```ts
+import { rpc, Contract, TransactionBuilder, nativeToScVal, Address } from "@stellar/stellar-sdk";
+import { signTransaction } from "@stellar/freighter-api";
+
+const server = new rpc.Server("https://soroban-testnet.stellar.org");
+const passphrase = "Test SDF Network ; September 2015";
+const ORBIT = "CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG";
+
+async function invoke(source: string, contractId: string, fn: string, args: any[]) {
+  const account = await server.getAccount(source);
+  const tx = new TransactionBuilder(account, { fee: "100000", networkPassphrase: passphrase })
+    .addOperation(new Contract(contractId).call(fn, ...args))
+    .setTimeout(60)
+    .build();
+  const prepared = await server.prepareTransaction(tx);           // simulate + footprint
+  const { signedTxXdr } = await signTransaction(prepared.toXDR(), { networkPassphrase: passphrase });
+  const sent = await server.sendTransaction(TransactionBuilder.fromXDR(signedTxXdr, passphrase));
+  return server.pollTransaction(sent.hash);                        // wait for the ledger
+}
+
+export async function subscribe(user: string, merchant: string, token: string,
+                                amount: bigint, interval: bigint, cycles: bigint) {
+  const { sequence } = await server.getLatestLedger();
+
+  // 1. allowance on the token
+  await invoke(user, token, "approve", [
+    new Address(user).toScVal(),
+    new Address(ORBIT).toScVal(),
+    nativeToScVal(amount * cycles, { type: "i128" }),
+    nativeToScVal(sequence + 500_000, { type: "u32" }),
+  ]);
+
+  // 2. vault terms on Orbit
+  await invoke(user, ORBIT, "create_vault", [
+    new Address(user).toScVal(),
+    new Address(merchant).toScVal(),
+    new Address(token).toScVal(),
+    nativeToScVal(amount, { type: "i128" }),
+    nativeToScVal(interval, { type: "u64" }),
+  ]);
+}
+```
+
+<Tip>
+  `prepareTransaction` simulates first. If the simulation fails (not enough balance, for example), show that error before you ask the user to sign.
+</Tip>

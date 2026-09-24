@@ -1,0 +1,68 @@
+---
+title: "Batch payroll"
+description: "Pay every contributor in one atomic ledger transaction."
+---
+
+`batch_disburse` sends a different amount to each recipient from a single sender, all inside one Soroban invocation. Either every transfer lands or none do.
+
+$$
+\sum_{i=1}^{N} \text{splits}[i].\text{amount} \le \text{allowance}(\text{sender}, \text{orbit})
+$$
+
+## From the dashboard
+
+<Note>
+  The dashboard's payroll module is in **preview**. It parses and checks the CSV, then simulates the disbursement. To pay on-chain today, use the CLI below.
+</Note>
+
+<Steps>
+  <Step title="Prepare a CSV">
+    ```csv
+    recipient,amount
+    GBXQ...A8S,4200.00
+    GDQP...4N2,3500.00
+    GA4B...78K,1800.00
+    ```
+
+    Amounts are in whole USDC. On-chain they become raw units (x 10^7).
+  </Step>
+
+  <Step title="Upload and validate">
+    **Dashboard → Batch Payroll → Upload CSV**. The rows are parsed into a recipient list you can review and edit.
+  </Step>
+
+  <Step title="Approve and disburse">
+    On-chain, this takes two signatures: `approve` for the batch total, then `batch_disburse`.
+  </Step>
+</Steps>
+
+## From the CLI
+
+```bash
+stellar contract invoke --id $TOKEN --source treasury --network testnet -- \
+  approve --from $TREASURY --spender $ORBIT --amount 95000000000 --live_until_ledger 5000000
+
+stellar contract invoke --id $ORBIT --source treasury --network testnet -- \
+  batch_disburse \
+  --sender $TREASURY \
+  --token $TOKEN \
+  --splits '[
+    {"recipient":"GBXQ...A8S","amount":"42000000000"},
+    {"recipient":"GDQP...4N2","amount":"35000000000"},
+    {"recipient":"GA4B...78K","amount":"18000000000"}
+  ]'
+```
+
+## Limits
+
+<AccordionGroup>
+  <Accordion title="How many recipients per batch?">
+    There is no hard-coded cap. The real limit is Soroban's per-transaction resource budget (CPU instructions and ledger writes). Simulate the transaction. If it goes over budget, split the payroll into several batches.
+  </Accordion>
+  <Accordion title="Can recipients be contracts?">
+    Yes. Any `Address` works, both `G...` accounts and `C...` contracts.
+  </Accordion>
+  <Accordion title="What if one recipient has no trustline?">
+    For classic assets like USDC, a `G...` recipient needs a trustline. If one is missing, that transfer fails and the **whole batch reverts**. Check trustlines before you submit.
+  </Accordion>
+</AccordionGroup>

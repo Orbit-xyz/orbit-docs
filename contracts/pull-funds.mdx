@@ -1,0 +1,65 @@
+---
+title: "pull_funds"
+description: "Collect one billing cycle from a subscriber's wallet into the merchant's."
+---
+
+```rust
+pub fn pull_funds(env: Env, user: Address, merchant: Address)
+```
+
+**Auth:** `merchant.require_auth()`
+
+## Parameters
+
+<ParamField path="user" type="Address" required>
+  The subscriber whose vault is being charged.
+</ParamField>
+
+<ParamField path="merchant" type="Address" required>
+  Must sign. Together with `user`, it forms the vault key.
+</ParamField>
+
+## Execution
+
+```rust
+merchant.require_auth();
+
+let key = VaultKey { user, merchant };
+let mut vault: VaultData = storage.get(&key).expect("Vault does not exist");
+let now = env.ledger().timestamp();
+
+if vault.last_pull_timestamp != 0 {
+    assert!(now >= vault.last_pull_timestamp + vault.interval_seconds,
+            "Too early to pull funds");
+}
+
+token.transfer_from(&orbit, &user, &merchant, &vault.amount_per_interval);
+
+vault.last_pull_timestamp = now;
+storage.set(&key, &vault);
+```
+
+## Guards
+
+| Check | Enforced by | On failure |
+|---|---|---|
+| Merchant signed | Soroban host | auth error |
+| Vault exists | Orbit | `Vault does not exist` |
+| Interval elapsed (skipped on first pull) | Orbit | `Too early to pull funds` |
+| Allowance ≥ amount and not expired | Token SAC | token error |
+| Balance ≥ amount | Token SAC | token error |
+
+## Effects
+
+- Transfers `amount_per_interval` from `user` straight to `merchant`.
+- Reduces the allowance by `amount_per_interval`.
+- Sets `last_pull_timestamp = now`.
+
+If anything fails, all of it reverts and `last_pull_timestamp` stays the same.
+
+## Example
+
+```bash
+stellar contract invoke --id $ORBIT --source merchant --network testnet -- \
+  pull_funds --user $SUBSCRIBER --merchant $MERCHANT
+```

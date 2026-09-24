@@ -1,0 +1,48 @@
+---
+title: "batch_disburse"
+description: "Pay many recipients from one sender in a single atomic invocation."
+---
+
+```rust
+pub fn batch_disburse(env: Env, sender: Address, token: Address, splits: Vec<PaymentSplit>)
+```
+
+**Auth:** `sender.require_auth()`
+
+## Parameters
+
+<ParamField path="sender" type="Address" required>
+  The treasury paying out. Must sign and must have approved Orbit for at least the sum of all splits.
+</ParamField>
+
+<ParamField path="token" type="Address" required>
+  SEP-41 token to pay in.
+</ParamField>
+
+<ParamField path="splits" type="Vec<PaymentSplit>" required>
+  Ordered list of `{ recipient: Address, amount: i128 }`. Amounts are raw units.
+</ParamField>
+
+## Execution
+
+```rust
+sender.require_auth();
+let token = token::Client::new(&env, &token);
+for split in splits.into_iter() {
+    token.transfer_from(&orbit, &sender, &split.recipient, &split.amount);
+}
+```
+
+## Properties
+
+- **Atomic:** a failure on split `k` reverts splits `0..k`.
+- **Stateless:** writes nothing to Orbit storage.
+- **Bounded by resources**, not by a constant: large batches can go over the transaction's CPU or ledger-write budget. Simulate first, and split the batch if needed.
+
+## Example
+
+```bash
+stellar contract invoke --id $ORBIT --source treasury --network testnet -- \
+  batch_disburse --sender $TREASURY --token $TOKEN \
+  --splits '[{"recipient":"'$A'","amount":"100000000"},{"recipient":"'$B'","amount":"50000000"}]'
+```

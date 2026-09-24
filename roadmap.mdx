@@ -1,0 +1,30 @@
+---
+title: "Roadmap"
+description: "What's shipped and what's next."
+---
+
+## Shipped
+
+- Allowance vaults with ledger-time cadence (`create_vault`, `pull_funds`)
+- Atomic batch payroll (`batch_disburse`)
+- Testnet deployment
+- Merchant API (plans, subscriptions, trigger pull)
+- Merchant dashboard, hosted checkout and `<OrbitCheckout />` preview
+- Freighter integration
+
+## Next
+
+<Steps>
+  <Step title="Contract hardening">
+    Typed `contracterror` codes, input validation, custom events (`VaultCreated`, `FundsPulled`, `BatchDisbursed`), a `cancel_vault` entrypoint, TTL extension on vault entries, and a wider test suite.
+  </Step>
+  <Step title="Real signing everywhere">
+    Hosted checkout, widget and dashboard submit real transactions through Freighter. The keeper signs with a KMS-held key instead of a secret in the request body.
+  </Step>
+  <Step title="Developer platform">
+    API keys, webhooks with HMAC signatures, and an npm-published widget and SDK.
+  </Step>
+  <Step title="Mainnet">
+    External security audit, then a mainnet deployment settling in USDC.
+  </Step>
+</Steps>

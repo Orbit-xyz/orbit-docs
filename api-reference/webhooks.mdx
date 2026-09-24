@@ -1,0 +1,34 @@
+---
+title: "Webhooks"
+description: "Planned event delivery for subscription and payout activity."
+---
+
+<Note>
+  Webhooks are **planned** and not live yet. This page describes the intended design so you can build against it. Until then, poll Soroban RPC for transaction status.
+</Note>
+
+## Planned events
+
+| Event | Fires when |
+|---|---|
+| `subscription.created` | A `create_vault` transaction for one of your plans is confirmed |
+| `pull.settled` | A `pull_funds` transaction is confirmed |
+| `pull.failed` | A scheduled pull fails simulation (allowance, balance or timing) |
+| `payroll.disbursed` | A `batch_disburse` transaction is confirmed |
+
+## Signature verification
+
+Each delivery will carry an `X-Orbit-Signature` header: the hex HMAC-SHA256 of the raw body, keyed with your webhook secret.
+
+```ts
+import crypto from "crypto";
+
+export function verify(rawBody: Buffer, header: string, secret: string) {
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(header, "hex");
+  const b = Buffer.from(expected, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+Treat a confirmed ledger transaction, reported by webhook or found by polling, as the only source of truth for fulfilment.

@@ -1,0 +1,75 @@
+---
+title: "API overview"
+description: "The Merchant API stores plans and subscriptions and submits pulls to Soroban."
+---
+
+The Merchant API is the off-chain side of Orbit. The contract enforces the money movement. The API keeps the records that a dashboard, checkout and keeper need.
+
+## Base URL
+
+The API is self-hosted from the monorepo:
+
+```bash
+cd Orbit/apps/backend
+cp .env.example .env     # add Supabase URL and service-role key
+npm install
+node index.js            # http://localhost:3001
+```
+
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Database (schema in `apps/backend/schema.sql`) |
+| `ORBIT_CONTRACT_ID` | Contract to invoke |
+| `SOROBAN_RPC_URL` | Soroban RPC endpoint |
+| `STELLAR_NETWORK_PASSPHRASE` | Network the transactions are signed for |
+
+## Conventions
+
+- JSON in and out. Send `Content-Type: application/json`.
+- IDs are UUIDs. Wallets are Stellar strkeys.
+- `usdc_amount` is an **integer in raw units** (7 decimals), the same value the contract uses.
+- Timestamps are ISO 8601 UTC.
+- Errors have the shape `{ "error": "message" }`. See [Errors](/api-reference/errors).
+
+## Authentication
+
+<Warning>
+  The MVP API has no API keys yet. Run it on a private network or behind your own auth proxy. Scoped secret keys are on the [roadmap](/roadmap).
+</Warning>
+
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/plans` | Create a plan |
+| `GET` | `/plans/{id}` | Retrieve a plan for checkout |
+| `POST` | `/subscriptions` | Record a subscription after the on-chain handshake |
+| `GET` | `/subscribers` | List a merchant's subscribers |
+| `POST` | `/trigger-pull` | Sign and submit `pull_funds` |
+
+## Data model
+
+```mermaid
+erDiagram
+    merchants ||--o{ plans : owns
+    plans ||--o{ subscriptions : has
+    merchants {
+        uuid id
+        string wallet_address
+        string name
+    }
+    plans {
+        uuid id
+        uuid merchant_id
+        string name
+        numeric usdc_amount
+        bigint interval_seconds
+    }
+    subscriptions {
+        uuid id
+        uuid plan_id
+        string customer_wallet_address
+        string status
+        timestamptz next_billing_date
+    }
+```

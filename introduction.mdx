@@ -1,0 +1,156 @@
+---
+title: "Recurring payments for onchain businesses"
+sidebarTitle: "Introduction"
+description: "Bill subscribers on a schedule and run payroll in one transaction, without ever holding your customers' funds."
+---
+
+<Info>
+  **Building with an AI agent?** Give it these rules:
+
+  - Token amounts are integers in raw units at the token's precision. USDC on Stellar has 7 decimals, so `29 USDC` is `290000000`. Never send floats to the contract.
+  - Build on **Stellar Testnet** first. The contract ID is `CAZBZBUWBSQYK2RZ6WHMXVDLIQHSU5WD7ANZYL6HLNSCRUOTNYCDYQNG` and the network passphrase is `Test SDF Network ; September 2015`.
+  - A subscription needs two signed calls from the subscriber: `approve` on the token (spender = Orbit contract), then `create_vault` on Orbit. There is no single "create subscription" call on-chain.
+  - A confirmed ledger transaction is the source of truth for a payment. Never trust a client-side success callback or redirect on its own.
+  - Durations are in seconds and use ledger time (`env.ledger().timestamp()`). Addresses are Stellar strkeys (`G...` accounts, `C...` contracts).
+</Info>
+
+Orbit is a pull-payment protocol built on **Stellar Soroban**. A subscriber signs once, keeps their USDC in their own wallet, and the merchant pulls a fixed amount each billing interval. The same contract pays a whole payroll in one atomic transaction.
+
+> Stablecoins settle in seconds. What's been missing is a way to charge them every month without asking the customer to sign every month, or making them lock funds in an escrow.
+
+## What is Orbit?
+
+Orbit separates **authorization** from **custody**. The subscriber sets a spending ceiling on the token itself, and the Orbit contract decides when the merchant may use it. Funds go straight from the subscriber's wallet to the merchant's. Orbit never holds a balance.
+
+<Note>
+  Orbit is live on Stellar Testnet. The contract is not audited yet, and mainnet is on the [roadmap](/roadmap).
+</Note>
+
+## What Orbit handles
+
+<AccordionGroup>
+  <Accordion title="Recurring billing without custody" icon="repeat">
+    [Allowance vaults](/concepts/allowance-vaults) store the terms (token, amount per interval, interval length) for each subscriber and merchant pair. The contract rejects a pull until the interval has passed on the ledger, and the token allowance caps the total the merchant can ever take.
+  </Accordion>
+
+  <Accordion title="Atomic batch payroll" icon="users">
+    Pay tens of contributors in one transaction with [`batch_disburse`](/contracts/batch-disburse). If a single transfer fails, the whole batch reverts, so nobody ends up paid twice or not at all.
+  </Accordion>
+
+  <Accordion title="Checkout" icon="credit-card">
+    Send customers to a [hosted checkout page](/guides/checkout/hosted-checkout) at `/pay/[id]`, or embed the [`<OrbitCheckout />` widget](/guides/checkout/widget) in your own React app. Both connect the Freighter wallet.
+  </Accordion>
+
+  <Accordion title="Merchant dashboard and API" icon="gauge">
+    Manage plans, subscribers, payment links and payroll from the dashboard, or script them against the [Merchant API](/api-reference/overview).
+  </Accordion>
+</AccordionGroup>
+
+## Who is Orbit for?
+
+Orbit is for teams that already get paid in stablecoins and want billing that runs itself.
+
+### You're a great fit if you're building
+
+<Columns cols={2}>
+  <Card title="SaaS and memberships" icon="layers" href="/guides/subscriptions/plans">
+    Monthly or yearly USDC plans. Customers stay in control of their funds, and you bill on schedule.
+  </Card>
+
+  <Card title="AI tools and APIs" icon="cpu" href="/guides/subscriptions/billing-cycles">
+    Charge a fixed amount per cycle from a keeper or your backend, with no manual approval each month.
+  </Card>
+
+  <Card title="DAOs and remote teams" icon="building" href="/guides/payroll/batch-payroll">
+    Upload a CSV and pay every contributor in one ledger transaction for a fraction of a cent.
+  </Card>
+
+  <Card title="Creators and communities" icon="sparkles" href="/guides/checkout/hosted-checkout">
+    Share a payment link. Fans subscribe with Freighter in a couple of clicks.
+  </Card>
+</Columns>
+
+## Why Orbit is different
+
+<Tabs>
+  <Tab title="Non-custodial">
+    <Card title="Funds stay with the subscriber">
+      Orbit is only the *spender* on the token. Every transfer goes straight from the subscriber to the merchant, and the contract never holds a balance.
+    </Card>
+
+    <Card title="Cancel on the token itself">
+      Setting the allowance to `0` stops billing right away. No support ticket, and no merchant cooperation needed.
+    </Card>
+  </Tab>
+
+  <Tab title="Enforced onchain">
+    <Card title="Ledger-time cadence">
+      `pull_funds` checks `now >= last_pull + interval` against `env.ledger().timestamp()`, not a clock the caller controls.
+    </Card>
+
+    <Card title="All or nothing">
+      Every Soroban invocation is atomic. A failed transfer rolls back the pull and leaves the cadence clock where it was.
+    </Card>
+  </Tab>
+
+  <Tab title="Ship faster">
+    <Card title="Three functions">
+      The whole contract is `create_vault`, `pull_funds` and `batch_disburse`, so there's very little to learn.
+    </Card>
+
+    <Card title="Testnet first">
+      Friendbot funds your accounts, and the [testnet guide](/guides/testnet) walks you through a full billing cycle.
+    </Card>
+  </Tab>
+</Tabs>
+
+## Quickstart
+
+<Steps>
+  <Step title="Install the Stellar CLI and fund an identity">
+    ```bash
+    stellar keys generate merchant --network testnet --fund
+    stellar keys generate subscriber --network testnet --fund
+    ```
+  </Step>
+
+  <Step title="Subscriber approves Orbit and opens a vault">
+    ```bash
+    stellar contract invoke --id $TOKEN --source subscriber --network testnet -- \
+      approve --from $SUBSCRIBER --spender $ORBIT --amount 3480000000 --live_until_ledger 5000000
+
+    stellar contract invoke --id $ORBIT --source subscriber --network testnet -- \
+      create_vault --user $SUBSCRIBER --merchant $MERCHANT --token $TOKEN \
+      --amount_per_interval 290000000 --interval_seconds 2592000
+    ```
+  </Step>
+
+  <Step title="Merchant pulls the first cycle">
+    ```bash
+    stellar contract invoke --id $ORBIT --source merchant --network testnet -- \
+      pull_funds --user $SUBSCRIBER --merchant $MERCHANT
+    ```
+
+    For the full walkthrough with environment variables and checks, see the [Quickstart](/quickstart).
+  </Step>
+</Steps>
+
+## Good to go?
+
+<Columns cols={2}>
+  <Card title="Open the dashboard" icon="layout-dashboard" href="https://orbit-lemon-mu.vercel.app/dashboard">
+    Create a plan and share a checkout link.
+  </Card>
+
+  <Card title="Read the contract reference" icon="file-code" href="/contracts/overview">
+    Every entrypoint, guard and failure mode.
+  </Card>
+
+  <Card title="Follow a guide" icon="book-open" href="/quickstart">
+    From a funded account to a settled pull in five minutes.
+  </Card>
+
+  <Card title="View the source" icon="github" href="https://github.com/Orbit-xyz/Orbit">
+    Contract, dashboard, API and widget in one monorepo.
+  </Card>
+</Columns>

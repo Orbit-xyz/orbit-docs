@@ -1,0 +1,89 @@
+---
+title: "Allowance vaults"
+description: "How Orbit bills on a schedule without ever holding the subscriber's funds."
+---
+
+An allowance vault is made of **two pieces of onchain state that work together**:
+
+| Piece | Lives in | Set by | Controls |
+|---|---|---|---|
+| Token allowance | The token's SAC | Subscriber, via `approve` | **How much** Orbit can move in total, and until which ledger |
+| `VaultData` | Orbit contract storage | Subscriber, via `create_vault` | **How often** the merchant can pull, and how much per pull |
+
+Tokens only move when both agree.
+
+## Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Approved : token.approve(user, orbit, cap, live_until_ledger)
+    Approved --> Active : create_vault
+    Active --> Active : pull_funds (interval elapsed)
+    Active --> Active : create_vault (terms overwritten, cadence reset)
+    Active --> Exhausted : allowance spent or expired
+    Active --> Revoked : token.approve(user, orbit, 0, ...)
+    Exhausted --> Active : re-approve
+    Revoked --> Active : re-approve
+```
+
+## Pull eligibility
+
+A pull succeeds only when all of these hold:
+
+$$
+\text{now} \ge \text{last\_pull} + \text{interval\_seconds} \;\lor\; \text{last\_pull} = 0
+$$
+
+$$
+\text{amount\_per\_interval} \le \text{allowance}(\text{user}, \text{orbit}) \;\land\; \text{amount\_per\_interval} \le \text{balance}(\text{user})
+$$
+
+The first condition is checked by Orbit. The second is enforced by the token contract inside `transfer_from`.
+
+## Storage
+
+```rust
+#[contracttype]
+pub struct VaultKey {
+    pub user: Address,
+    pub merchant: Address,
+}
+
+#[contracttype]
+pub struct VaultData {
+    pub token: Address,
+    pub amount_per_interval: i128,
+    pub interval_seconds: u64,
+    pub last_pull_timestamp: u64,
+}
+```
+
+- There is one vault per `(user, merchant)` pair, stored in **persistent** storage.
+- A subscriber can hold vaults with any number of merchants, each with its own terms.
+- Calling `create_vault` again for the same pair **overwrites** the terms and sets `last_pull_timestamp` back to `0`.
+
+## Sizing the allowance
+
+Approve `amount_per_interval x cycles` and choose a `live_until_ledger` that covers them:
+
+```text
+cycles            = 12
+amount            = 290000000            # 29 USDC
+allowance         = 3480000000           # 348 USDC
+ledgers per cycle ~ 2592000 / 5 = 518400
+```
+
+<Tip>
+  A short allowance that you top up on renewal gives subscribers more control than one large, long-lived allowance. The dashboard can prompt for re-approval when the allowance is about to run out.
+</Tip>
+
+## Cancelling
+
+Subscribers cancel **on the token**, not on Orbit:
+
+```bash
+stellar contract invoke --id $TOKEN --source subscriber --network testnet -- \
+  approve --from $SUBSCRIBER --spender $ORBIT --amount 0 --live_until_ledger 0
+```
+
+After this, every `pull_funds` for that subscriber fails inside the SAC, whatever vault terms are stored.

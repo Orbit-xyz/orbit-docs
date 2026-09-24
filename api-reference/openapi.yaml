@@ -1,0 +1,289 @@
+openapi: 3.1.0
+info:
+  title: Orbit Merchant API
+  version: 0.1.0
+  description: >
+    Off-chain companion to the Orbit Soroban contract. Stores plans and
+    subscriptions in Supabase and submits merchant-signed `pull_funds`
+    transactions to Stellar Testnet.
+servers:
+  - url: http://localhost:3001
+    description: Self-hosted (apps/backend)
+tags:
+  - name: Plans
+  - name: Subscriptions
+  - name: Billing
+paths:
+  /plans:
+    post:
+      tags: [Plans]
+      summary: Create a plan
+      description: Creates a recurring plan owned by a merchant.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [merchant_id, name, usdc_amount, interval_seconds]
+              properties:
+                merchant_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                  example: Pro Monthly
+                usdc_amount:
+                  type: integer
+                  description: Raw token units (7 decimals). 290000000 = 29 USDC.
+                  example: 290000000
+                interval_seconds:
+                  type: integer
+                  example: 2592000
+      responses:
+        '201':
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Plan created successfully
+                  plan:
+                    $ref: '#/components/schemas/Plan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /plans/{id}:
+    get:
+      tags: [Plans]
+      summary: Retrieve a plan
+      description: Returns a plan with its merchant's name and wallet address. Used by checkout.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Plan found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan:
+                    allOf:
+                      - $ref: '#/components/schemas/Plan'
+                      - type: object
+                        properties:
+                          merchants:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              wallet_address:
+                                type: string
+                                example: GBXQ4T7W91LK3PMZ0VR82C5E7NDF6U9H4YJ2A8S
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /subscriptions:
+    post:
+      tags: [Subscriptions]
+      summary: Record a subscription
+      description: >
+        Records a subscription after the subscriber has completed `approve` and
+        `create_vault` on-chain. Sets `next_billing_date` to now so the first
+        cycle can be pulled right away. A wallet can subscribe to a plan only once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan_id, customer_wallet_address]
+              properties:
+                plan_id:
+                  type: string
+                  format: uuid
+                customer_wallet_address:
+                  type: string
+                  description: Subscriber's Stellar account (G...).
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Subscription created
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /subscribers:
+    get:
+      tags: [Subscriptions]
+      summary: List subscribers
+      description: Lists subscriptions across every plan owned by a merchant.
+      parameters:
+        - name: merchant_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Subscriber list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscribers:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Subscription'
+                        - type: object
+                          properties:
+                            plans:
+                              type: object
+                              properties:
+                                merchant_id:
+                                  type: string
+                                name:
+                                  type: string
+                                usdc_amount:
+                                  type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /trigger-pull:
+    post:
+      tags: [Billing]
+      summary: Pull a billing cycle
+      description: >
+        Builds a `pull_funds(user, merchant)` invocation, simulates it with
+        `prepareTransaction`, signs it with the merchant key, and submits it to
+        Soroban Testnet. On submission, `next_billing_date` moves forward.
+        TESTNET ONLY: the merchant secret travels in the request body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subscription_id, merchant_secret]
+              properties:
+                subscription_id:
+                  type: string
+                  format: uuid
+                merchant_secret:
+                  type: string
+                  description: Merchant's Stellar secret seed (S...). Must match the plan owner's wallet.
+      responses:
+        '200':
+          description: Transaction submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully pulled funds on-chain!
+                  txHash:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Secret does not match the plan owner's wallet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+components:
+  schemas:
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        usdc_amount:
+          type: integer
+        interval_seconds:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        customer_wallet_address:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, past_due]
+        next_billing_date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Missing required fields
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Database or Soroban error; message passed through
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
