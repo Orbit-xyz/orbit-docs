@@ -11,8 +11,7 @@ https://orbit-lemon-mu.vercel.app/pay/{plan_id}
 
 ## Flow
 
-```mermaid
-sequenceDiagram
+<Mermaid chart={`sequenceDiagram
     participant C as Customer
     participant P as /pay/[id]
     participant F as Freighter
@@ -28,11 +27,11 @@ sequenceDiagram
     F->>S: submit
     P->>A: POST /subscriptions
     P-->>C: subscribed
-```
+`} />
 
 <Steps>
   <Step title="Create a plan">
-    In the dashboard, open **Subscription Plans** and create one, or call [`POST /plans`](/api-reference/overview). Copy its `id`.
+    In the dashboard, open **Subscription Plans** and create one, or call [`POST /plans`](/api-reference/create-plan). Copy its `id`.
   </Step>
 
   <Step title="Share the link">
@@ -40,12 +39,12 @@ sequenceDiagram
   </Step>
 
   <Step title="Pull on schedule">
-    Once the customer subscribes, they appear under **Subscribers**. Pull each cycle from the dashboard, or automate it. See [Billing cycles](/guides/subscriptions/billing-cycles).
+    Once the customer subscribes, they appear under **Subscribers**. Pull each cycle from the dashboard, or automate it. See [Billing cycles](/subscriptions/billing-cycles).
   </Step>
 </Steps>
 
 <Note>
-  The hosted page is in **preview**. It connects Freighter (or falls back to a demo wallet) and records the subscription, but it does not yet submit the `approve` and `create_vault` transactions. Until it does, run the handshake with the code in [Checkout widget](/guides/checkout/widget#signing-the-handshake-yourself).
+  The hosted page is in **preview**. It connects Freighter (or falls back to a demo wallet) and records the subscription, but it does not yet submit the `approve` and `create_vault` transactions. Until it does, run the handshake with the code in [Checkout widget](/checkout/widget#signing-the-handshake-yourself).
 </Note>
 
 <Warning>

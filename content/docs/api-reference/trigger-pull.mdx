@@ -1,0 +1,50 @@
+---
+title: "Pull a billing cycle"
+description: "POST /trigger-pull signs and submits pull_funds for a subscription."
+---
+
+<Endpoint method="POST" path="/trigger-pull" />
+
+Builds `pull_funds(user, merchant)`, simulates it with `prepareTransaction`, signs it with the merchant key and submits it to Soroban Testnet. Then it moves `next_billing_date` forward.
+
+<Warning>
+  **Testnet only.** The merchant's secret seed travels in the request body. In production, sign on the client (Freighter) or with a KMS-held key.
+</Warning>
+
+## Body
+
+<ParamField body="subscription_id" type="uuid" required>
+  Subscription to bill.
+</ParamField>
+
+<ParamField body="merchant_secret" type="string" required>
+  Merchant's secret seed (`S...`). Must match the wallet of the plan's owner.
+</ParamField>
+
+## Request
+
+```bash
+curl -X POST http://localhost:3001/trigger-pull \
+  -H "Content-Type: application/json" \
+  -d '{ "subscription_id": "b2a9e4c1-...", "merchant_secret": "S..." }'
+```
+
+## Response `200`
+
+```json
+{
+  "message": "Successfully pulled funds on-chain!",
+  "txHash": "6f4a8b...19e0"
+}
+```
+
+| Status | When |
+|---|---|
+| `400` | A field is missing |
+| `401` | Secret does not match the plan owner's wallet |
+| `404` | Subscription not found |
+| `500` | Simulation or submission failed. See [contract errors](/contracts/errors) |
+
+<Note>
+  The response comes back once the transaction is **submitted**, before it is confirmed. Poll `getTransaction(txHash)` before you mark the cycle as paid.
+</Note>

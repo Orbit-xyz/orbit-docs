@@ -14,8 +14,7 @@ Tokens only move when both agree.
 
 ## Lifecycle
 
-```mermaid
-stateDiagram-v2
+<Mermaid chart={`stateDiagram-v2
     [*] --> Approved : token.approve(user, orbit, cap, live_until_ledger)
     Approved --> Active : create_vault
     Active --> Active : pull_funds (interval elapsed)
@@ -24,19 +23,19 @@ stateDiagram-v2
     Active --> Revoked : token.approve(user, orbit, 0, ...)
     Exhausted --> Active : re-approve
     Revoked --> Active : re-approve
-```
+`} />
 
 ## Pull eligibility
 
 A pull succeeds only when all of these hold:
 
-$$
-\text{now} \ge \text{last\_pull} + \text{interval\_seconds} \;\lor\; \text{last\_pull} = 0
-$$
+```text
+now >= last_pull + interval_seconds OR last_pull = 0
+```
 
-$$
-\text{amount\_per\_interval} \le \text{allowance}(\text{user}, \text{orbit}) \;\land\; \text{amount\_per\_interval} \le \text{balance}(\text{user})
-$$
+```text
+amount_per_interval <= allowance(user, orbit) AND amount_per_interval <= balance(user)
+```
 
 The first condition is checked by Orbit. The second is enforced by the token contract inside `transfer_from`.
 

@@ -1,0 +1,40 @@
+---
+title: "Retrieve a plan"
+description: "GET /plans/{id} returns a plan with its merchant, for checkout."
+---
+
+<Endpoint method="GET" path="/plans/{id}" />
+
+## Path
+
+<ParamField path="id" type="uuid" required>
+  Plan ID.
+</ParamField>
+
+## Request
+
+```bash
+curl http://localhost:3001/plans/7c1e2d4a-0f6b-4a8e-9d51-3b2c9a1f6e20
+```
+
+## Response `200`
+
+```json
+{
+  "plan": {
+    "id": "7c1e2d4a-0f6b-4a8e-9d51-3b2c9a1f6e20",
+    "name": "Pro Monthly",
+    "usdc_amount": 290000000,
+    "interval_seconds": 2592000,
+    "merchants": {
+      "name": "Drips Labs",
+      "wallet_address": "GBXQ...A8S"
+    }
+  }
+}
+```
+
+| Status | When |
+|---|---|
+| `404` | Plan not found |
+| `500` | Database error |

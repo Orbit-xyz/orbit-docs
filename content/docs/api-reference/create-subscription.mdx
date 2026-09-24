@@ -1,0 +1,41 @@
+---
+title: "Record a subscription"
+description: "POST /subscriptions records a subscriber after the onchain handshake."
+---
+
+<Endpoint method="POST" path="/subscriptions" />
+
+Call this after the subscriber's `approve` and `create_vault` transactions are confirmed. It sets `next_billing_date` to now, so the first cycle can be pulled right away. A wallet can subscribe to a given plan only once.
+
+## Body
+
+<ParamField body="plan_id" type="uuid" required>
+  Plan being subscribed to.
+</ParamField>
+
+<ParamField body="customer_wallet_address" type="string" required>
+  Subscriber's Stellar account (`G...`).
+</ParamField>
+
+## Request
+
+```bash
+curl -X POST http://localhost:3001/subscriptions \
+  -H "Content-Type: application/json" \
+  -d '{ "plan_id": "7c1e2d4a-...", "customer_wallet_address": "GDQP...4N2" }'
+```
+
+## Response `201`
+
+```json
+{
+  "message": "Subscription created",
+  "subscription": {
+    "id": "b2a9e4c1-...",
+    "plan_id": "7c1e2d4a-...",
+    "customer_wallet_address": "GDQP...4N2",
+    "status": "active",
+    "next_billing_date": "2026-09-25T10:00:00Z"
+  }
+}
+```

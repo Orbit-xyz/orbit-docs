@@ -5,9 +5,9 @@ description: "Pay every contributor in one atomic ledger transaction."
 
 `batch_disburse` sends a different amount to each recipient from a single sender, all inside one Soroban invocation. Either every transfer lands or none do.
 
-$$
-\sum_{i=1}^{N} \text{splits}[i].\text{amount} \le \text{allowance}(\text{sender}, \text{orbit})
-$$
+```text
+sum(i=1..N) splits[i].amount <= allowance(sender, orbit)
+```
 
 ## From the dashboard
 

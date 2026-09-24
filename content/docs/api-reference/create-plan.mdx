@@ -1,0 +1,58 @@
+---
+title: "Create a plan"
+description: "POST /plans creates a recurring plan owned by a merchant."
+---
+
+<Endpoint method="POST" path="/plans" />
+
+## Body
+
+<ParamField body="merchant_id" type="uuid" required>
+  Merchant that owns the plan.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Shown at checkout, for example `Pro Monthly`.
+</ParamField>
+
+<ParamField body="usdc_amount" type="integer" required>
+  Raw token units (7 decimals). `290000000` = 29 USDC.
+</ParamField>
+
+<ParamField body="interval_seconds" type="integer" required>
+  Minimum gap between pulls. `2592000` = 30 days.
+</ParamField>
+
+## Request
+
+```bash
+curl -X POST http://localhost:3001/plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchant_id": "3f0c6a1e-5b7d-4e2a-9c8f-1d2e3f4a5b6c",
+    "name": "Pro Monthly",
+    "usdc_amount": 290000000,
+    "interval_seconds": 2592000
+  }'
+```
+
+## Response `201`
+
+```json
+{
+  "message": "Plan created successfully",
+  "plan": {
+    "id": "7c1e2d4a-0f6b-4a8e-9d51-3b2c9a1f6e20",
+    "merchant_id": "3f0c6a1e-5b7d-4e2a-9c8f-1d2e3f4a5b6c",
+    "name": "Pro Monthly",
+    "usdc_amount": 290000000,
+    "interval_seconds": 2592000,
+    "created_at": "2026-09-25T10:00:00Z"
+  }
+}
+```
+
+| Status | When |
+|---|---|
+| `400` | A required field is missing |
+| `500` | Database error |

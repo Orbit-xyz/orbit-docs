@@ -41,16 +41,15 @@ node index.js            # http://localhost:3001
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/plans` | Create a plan |
-| `GET` | `/plans/{id}` | Retrieve a plan for checkout |
-| `POST` | `/subscriptions` | Record a subscription after the on-chain handshake |
-| `GET` | `/subscribers` | List a merchant's subscribers |
-| `POST` | `/trigger-pull` | Sign and submit `pull_funds` |
+| `POST` | [`/plans`](/api-reference/create-plan) | Create a plan |
+| `GET` | [`/plans/{id}`](/api-reference/get-plan) | Retrieve a plan for checkout |
+| `POST` | [`/subscriptions`](/api-reference/create-subscription) | Record a subscription after the on-chain handshake |
+| `GET` | [`/subscribers`](/api-reference/list-subscribers) | List a merchant's subscribers |
+| `POST` | [`/trigger-pull`](/api-reference/trigger-pull) | Sign and submit `pull_funds` |
 
 ## Data model
 
-```mermaid
-erDiagram
+<Mermaid chart={`erDiagram
     merchants ||--o{ plans : owns
     plans ||--o{ subscriptions : has
     merchants {
@@ -72,4 +71,4 @@ erDiagram
         string status
         timestamptz next_billing_date
     }
-```
+`} />
