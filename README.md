@@ -38,10 +38,13 @@ Pages use Mintlify-style components (`<Note>`, `<AccordionGroup>`, `<Steps>`, `<
 ```bash
 npm install
 npm run dev           # http://localhost:3000
-npm run build         # production build, type-checks every page
+npm run types:check   # generated routes and TypeScript validation
+npm run build         # production build, validates every docs page
 ```
 
 Search (`Ctrl K`), `llms.txt`, `llms-full.txt` and per-page Markdown (`/<page>.md`) are built in.
+
+Pull requests and pushes to `main` run these checks on Node.js 20 using `npm ci` in [GitHub Actions](.github/workflows/ci.yml). Fix failing type generation, TypeScript, or MDX compilation before merging.
 
 ## Deploy
 
