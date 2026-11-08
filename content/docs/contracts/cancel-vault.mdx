@@ -1,0 +1,71 @@
+---
+title: "cancel_vault"
+description: "Subscriber deletes the vault for one merchant, so no further pulls can happen."
+---
+
+```rust
+pub fn cancel_vault(env: Env, user: Address, merchant: Address)
+```
+
+**Auth:** `user.require_auth()`. Only the subscriber can cancel. The merchant cannot call this entrypoint for them.
+
+<Note>
+  **Preview.** `cancel_vault` is in the contract source on `main` but not yet in the testnet deployment `CAZBZBUW...CDYQNG`. It becomes callable there after the next redeploy.
+</Note>
+
+## Parameters
+
+<ParamField path="user" type="Address" required>
+  The subscriber who owns the vault. Must sign.
+</ParamField>
+
+<ParamField path="merchant" type="Address" required>
+  The merchant the vault pays. Together with `user`, it forms the vault key.
+</ParamField>
+
+## Execution
+
+```rust
+user.require_auth();
+
+let key = VaultKey { user, merchant };
+assert!(storage.has(&key), "Vault does not exist");
+
+storage.remove(&key);
+env.events().publish((Symbol::new(&env, "vault_cancelled"), user, merchant), ());
+```
+
+## Effects
+
+- Removes the `VaultKey { user, merchant }` entry from persistent storage, along with the per-pair state the contract keeps next to it.
+- Publishes a [`vault_cancelled`](/contracts/events) event with `user` and `merchant` as topics and an empty payload.
+- After it succeeds, `get_vault` returns `None` for the pair and `pull_funds` fails with `Vault does not exist`.
+
+<Warning>
+  `cancel_vault` does **not** revoke the token allowance. Orbit cannot pull without a vault, but the approval the subscriber gave Orbit on the token stays in place until it expires or the subscriber sets it to `0` with `approve`. If the subscriber wants nothing left behind, they should revoke the allowance in a separate call.
+</Warning>
+
+To start billing the same merchant again, the subscriber runs [`create_vault`](/contracts/create-vault) for the pair. The new vault starts with `last_pull_timestamp = 0`, so the merchant can pull right away.
+
+## Errors
+
+| Message | Cause | Fix |
+|---|---|---|
+| `Vault does not exist` | No vault for this `(user, merchant)`, or it was already cancelled | Check with `get_vault` before cancelling |
+| Auth error | `user` did not sign | Sign with the subscriber's key |
+
+See [contract errors](/contracts/errors) for the full list.
+
+## Example
+
+```bash
+stellar contract invoke --id $ORBIT --source subscriber --network testnet -- \
+  cancel_vault --user $SUBSCRIBER --merchant $MERCHANT
+```
+
+To also revoke the allowance, set it to `0` on the token:
+
+```bash
+stellar contract invoke --id $USDC --source subscriber --network testnet -- \
+  approve --from $SUBSCRIBER --spender $ORBIT --amount 0 --expiration_ledger 0
+```
