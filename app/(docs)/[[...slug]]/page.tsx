@@ -20,16 +20,25 @@ export default async function Page(props: PageProps<'/[[...slug]]'>) {
 
   const MDX = page.data.body;
   const markdownUrl = getPageMarkdownUrl(page).url;
+  const githubEditUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`;
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
-      <div className="flex flex-row gap-2 items-center border-b pb-6">
+      <div className="flex flex-row flex-wrap gap-3 items-center border-b pb-6">
         <MarkdownCopyButton markdownUrl={markdownUrl} />
+        <a
+          href={githubEditUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-fd-muted-foreground underline underline-offset-4 hover:text-fd-foreground"
+        >
+          Edit this page on GitHub
+        </a>
         <ViewOptionsPopover
           markdownUrl={markdownUrl}
-          githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
+          githubUrl={githubEditUrl}
         />
       </div>
       <DocsBody>
