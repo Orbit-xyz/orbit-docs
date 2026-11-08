@@ -9,12 +9,12 @@ Orbit currently fails with host panics that carry a string message, not typed `c
 |---|---|---|---|
 | `amount_per_interval must be positive` | `create_vault` | `amount_per_interval <= 0` | Pass an amount greater than zero, in raw token units |
 | `interval_seconds must be greater than zero` | `create_vault` | `interval_seconds == 0` | Pass an interval of at least 1 second |
-| `Vault does not exist` | `pull_funds` | No `create_vault` for this `(user, merchant)` | Subscriber completes the handshake |
+| `Vault does not exist` | `pull_funds`, `cancel_vault` | No vault for this `(user, merchant)`: never created, or already cancelled | Subscriber completes the handshake with `create_vault` |
 | `Too early to pull funds` | `pull_funds` | `now < last_pull + interval` | Retry after the next eligible time |
 | `splits must not be empty` | `batch_disburse` | `splits` has no entries | Provide at least one recipient and amount |
 | `split amount must be positive` | `batch_disburse` | Any split has `amount <= 0` | Pass an amount greater than zero, in raw token units |
 | `Total amount overflow` | `batch_disburse` | Sum of all split amounts overflows `i128` | Keep the total batch payout within `i128::MAX` |
-| Auth error | all | Required signer missing | Sign with `user`, `merchant` or `sender` |
+| Auth error | all except `get_vault` | Required signer missing | Sign with `user`, `merchant` or `sender` |
 | Allowance error (SAC) | `pull_funds`, `batch_disburse` | Allowance too low, expired or revoked | Re-approve Orbit on the token |
 | Balance error (SAC) | `pull_funds`, `batch_disburse` | Source lacks tokens | Fund the wallet |
 | Trustline error (SAC) | `pull_funds`, `batch_disburse` | Receiving `G...` account has no trustline | Add a trustline for the asset |

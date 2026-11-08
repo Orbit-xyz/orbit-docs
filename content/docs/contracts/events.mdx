@@ -14,7 +14,7 @@ Each state-changing entrypoint publishes one event when it succeeds. The first t
 | `vault_created` | [`create_vault`](/contracts/create-vault) | `(vault_created, user, merchant)` | `(token, amount_per_interval, interval_seconds)` |
 | `funds_pulled` | [`pull_funds`](/contracts/pull-funds) | `(funds_pulled, user, merchant)` | `(amount_per_interval, timestamp)` |
 | `batch_disbursed` | [`batch_disburse`](/contracts/batch-disburse) | `(batch_disbursed, sender)` | `(token, recipient_count, total_amount)` |
-| `vault_cancelled` | `cancel_vault` | `(vault_cancelled, user, merchant)` | `()` |
+| `vault_cancelled` | [`cancel_vault`](/contracts/cancel-vault) | `(vault_cancelled, user, merchant)` | `()` |
 
 ## Fields
 

@@ -1,1 +1,1 @@
-{ "pages": ["overview", "create-vault", "get-vault", "pull-funds", "batch-disburse", "events", "errors"] }
+{ "pages": ["overview", "create-vault", "get-vault", "pull-funds", "cancel-vault", "batch-disburse", "events", "errors"] }
