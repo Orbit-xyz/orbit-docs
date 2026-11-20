@@ -46,6 +46,14 @@ Search (`Ctrl K`), `llms.txt`, `llms-full.txt` and per-page Markdown (`/<page>.m
 
 Pull requests and pushes to `main` run these checks on Node.js 20 using `npm ci` in [GitHub Actions](.github/workflows/ci.yml). Fix failing type generation, TypeScript, or MDX compilation before merging.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, documentation structure, MDX components, and the checks required before opening a pull request.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE), matching the license used by [Orbit-xyz/Orbit](https://github.com/Orbit-xyz/Orbit).
+
 ## Deploy
 
 Live at **[orbit-docs-eta.vercel.app](https://orbit-docs-eta.vercel.app)**. Deployed on Vercel as its own project, and every push to `main` redeploys.
