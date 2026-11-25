@@ -4,6 +4,7 @@ export const appName = 'Orbit Docs';
 export const docsRoute = '/';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';
+export const siteUrl = 'https://orbit-docs-eta.vercel.app';
 
 export const appUrl = 'https://orbit-lemon-mu.vercel.app';
 
